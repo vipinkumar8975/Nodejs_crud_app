@@ -7,7 +7,9 @@ router.get('/findAll', userController.findAll);
 
 router.post('/create', userController.create);
 
-// router.post('/image', userController.image);
+// router.post('/signup', userController.signup);
+
+// router.post('/signIn', userController.signIp);
 
 router.get('/:id', userController.findOne);
 

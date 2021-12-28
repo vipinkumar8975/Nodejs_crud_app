@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser')
 const fileUpload = require('express-fileupload')
+const cors = require('cors');
 
 const userRoutes = require('./src/routes/user.routes');
 
@@ -8,21 +9,24 @@ const app = express();
 
 const port = process.env.PORT || 4000;
 
+app.use(cors());
+
 app.use(bodyParser.urlencoded({extended: true}));
 
 app.use(bodyParser.json());
 
+// for image uploading
+app.use(fileUpload());
+
 // using as middleware 
 app.use('/api/users', userRoutes)
 
-// for image uploading
-app.use(fileUpload({
-    useTempFiles:true
-}));
+
 
 // configuring the database 
 const dbConfig = require('./config/db.config');
 const mongoose = require('mongoose');
+const { use } = require('./src/routes/user.routes');
 mongoose.Promise = global.Promise; 
 
 // connecting to the database 

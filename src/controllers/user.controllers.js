@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/user.model');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 // const cloudinary = require('cloudinary').v2;
 
 
@@ -23,15 +25,22 @@ exports.findAll = (req, res) => {
         });
 };
 
+
 //create and save new user
 
 exports.create = (req, res) => {
     //validate request
     if (!req.body) {
         return res.status(400).send({
-            message: "Please fill all required field"
+            message: "Please fill data"
         });
     }
+
+    // const file = req.files.image.data.toString('base64');
+    // cloudinary.uploader.upload(file.tempFilePath, (err, result) => {
+    //     console.log(result);
+    // });
+
 
     // create new user 
     const user = new User({
@@ -40,11 +49,13 @@ exports.create = (req, res) => {
         last_name: req.body.last_name,
         email: req.body.email,
         phone: req.body.phone,
+        image: req.body.image,
     });
-
+    console.log("user", user, req.body);
     // save user in database 
     user.save()
         .then(data => {
+            console.log("data", data)
             res.send(data);
         }).catch(err => {
             res.status(500).send({
@@ -53,23 +64,91 @@ exports.create = (req, res) => {
         });
 };
 
+exports.signup = (req, res) => {
+    bcrypt.hash(req.body.password, 10, (err, hash) => {
+        if (err) {  
+            return res.status(400).send({
+                error: err
+            });
+        } else {
+            const user = new User({
+                _id: new mongoose.Types.ObjectId,
+                first_name: req.body.first_name,
+                last_name: req.body.last_name,
+                email: req.body.email,
+                password: hash,
+                phone: req.body.phone,
+                image: req.body.image,
+            });
+            console.log('user', user, req.body);
+            user.save()
+                .then(data => {
+                    console.log(data);
+                    res.status(200).send(data)
+                }).catch(err =>{
+                    res.status.send({
+                        message: "message not found"
+                    })
+                });
+        }
+    });
+}
+
+// signIn 
+exports.signIn = (req, res) => {
+    User.find({ first_name: req.body.first_name })
+        .exec()
+        .then(user => {
+            if (user.length < 1) {
+                return res.status(401).json({
+                    msg: 'user not exist'
+                })
+            }
+            bcrypt.comapre(req.body.password, user[0].password, (err, result) => {
+                if (!result) {
+                    return res.status(401).json({
+                        msg: 'password is not matching'
+                    })
+                }
+                if (result) {
+                    const token = jwt.sign({
+                        first_name: user[0].first_name,
+                        phone: user[0].phone,
+                        email: email[0].email
+                    },
+                        'this is dummy text',
+                        {
+                            expiresIn: "24h"
+                        }
+                    );
+                    res.status(200).json({
+                        first_name: user[0].first_name,
+                        phone: user[0].phone,
+                        email: email[0].email,
+                        token:token
+                    })
+                }
+            })
+        }).catch(err=>{
+            res.status(500).json({
+                err:err
+            })
+        })
+}
+
+
 // finding single user with id 
 exports.findOne = (req, res) => {
     User.findById(req.params.id)
 
         .then(user => {
             if (!user) {
-                return res.status(404).send({
+                return res.status(500).send({
                     message: "User not found with id " + req.params.id
                 });
             };
             res.send(user);
         }).catch(err => {
-            if (err.kind === 'objectId') {
-                return res.status(404).send({
-                    message: "User not found with id " + req.params.id
-                });
-            };
             return res.status(500).send({
                 message: "Error getting user with id " + req.params.id
             });
@@ -123,37 +202,3 @@ exports.delete = (req, res) => {
             });
         });
 };
-
-
-// for image uploading =>post request 
-// exports.image = (req, res) => {
-//     console.log(req.body);
-//     const file = req.files.photo;
-//     cloudinary.uploader.upload(file.tempFilePath, (err, result) => {
-//         console.log(result);
-
-//         if (!req.body) {
-//             return res.status(400).send({
-//                 message: "Please select image file before uploading"
-//             });
-//         }
-
-//         const user = new User({
-//             _id: new mongoose.Types.ObjectId,
-//             first_name: req.body.first_name,
-//             last_name: req.body.last_name,
-//             email: req.body.email,
-//             phone: req.body.phone,
-//             imagePath:result.url,
-//         });
-
-//         user.save()
-//             .then(data => {
-//                 res.send(data);
-//             }).catch(err => {
-//                 res.status(500).send({
-//                     message: "Something went wrong while uploading image."
-//                 });
-//             });
-//     })
-// };
